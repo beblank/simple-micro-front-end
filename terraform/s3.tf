@@ -26,8 +26,6 @@ resource "aws_s3_bucket_public_access_block" "website" {
 resource "aws_s3_bucket_policy" "website" {
   bucket = aws_s3_bucket.website.id
 
-  depends_on = [aws_cloudfront_distribution.website]
-
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -106,19 +104,6 @@ resource "aws_cloudfront_distribution" "website" {
 
     viewer_protocol_policy = "redirect-to-https"
     compress               = true
-  }
-
-  # Custom error responses for SPA-like behavior
-  custom_error_response {
-    error_code         = 404
-    response_code      = 404
-    response_page_path = "/index.html"
-  }
-
-  custom_error_response {
-    error_code         = 403
-    response_code      = 403
-    response_page_path = "/index.html"
   }
 
   restrictions {
