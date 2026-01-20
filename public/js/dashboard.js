@@ -2,11 +2,17 @@
 (function() {
     'use strict';
 
-    // Protect dashboard page
-    Auth.requireAuth();
-
     // Initialize dashboard
     function init() {
+        // Protect dashboard page - must be called after Auth is loaded
+        if (typeof Auth !== 'undefined') {
+            Auth.requireAuth();
+        } else {
+            console.error('Auth module not loaded');
+            window.location.href = '/login.html';
+            return;
+        }
+
         // Update user name
         updateUserInfo();
 

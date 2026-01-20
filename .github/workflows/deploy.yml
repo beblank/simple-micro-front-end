@@ -96,8 +96,7 @@ jobs:
           aws s3 sync public/ s3://$BUCKET_NAME/ \
             --delete \
             --cache-control "public, max-age=31536000" \
-            --exclude "*.html" \
-            --exclude "index.html"
+            --exclude "*.html"
           
           # Upload HTML files with no-cache to ensure updates are immediately visible
           aws s3 sync public/ s3://$BUCKET_NAME/ \
