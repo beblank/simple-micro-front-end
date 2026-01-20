@@ -92,17 +92,20 @@ jobs:
           
           echo "Deploying to S3 bucket: $BUCKET_NAME"
           
-          # Sync files to S3 with appropriate cache headers
-          aws s3 sync public/ s3://$BUCKET_NAME/ \
+          # First, sync CSS and JS files with long cache
+          aws s3 sync public/css/ s3://$BUCKET_NAME/css/ \
             --delete \
-            --cache-control "public, max-age=31536000" \
-            --exclude "*.html"
+            --cache-control "public, max-age=31536000"
           
-          # Upload HTML files with no-cache to ensure updates are immediately visible
+          aws s3 sync public/js/ s3://$BUCKET_NAME/js/ \
+            --delete \
+            --cache-control "public, max-age=31536000"
+          
+          # Then, sync HTML files with no-cache
           aws s3 sync public/ s3://$BUCKET_NAME/ \
-            --cache-control "no-cache, no-store, must-revalidate" \
-            --exclude "*" \
-            --include "*.html"
+            --exclude "css/*" \
+            --exclude "js/*" \
+            --cache-control "no-cache, no-store, must-revalidate"
 
       - name: Invalidate CloudFront cache
         run: |

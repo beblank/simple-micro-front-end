@@ -53,7 +53,7 @@
 })();
 
 // Login page specific logic
-if (window.location.pathname.includes('login')) {
+if (window.location.pathname === '/login.html' || window.location.pathname.endsWith('/login.html')) {
     document.addEventListener('DOMContentLoaded', function() {
         // Redirect if already authenticated
         if (Auth.isAuthenticated()) {
