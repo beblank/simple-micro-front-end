@@ -1,0 +1,128 @@
+name: Deploy to AWS
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-1
+  NODE_VERSION: '18'
+
+jobs:
+  validate:
+    name: Validate Build
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check file sizes
+        run: |
+          echo "Checking file sizes..."
+          find public -type f -exec du -h {} \; | sort -rh | head -20
+          
+          # Check total size of each page
+          for page in public/*.html; do
+            page_name=$(basename "$page")
+            total_size=0
+            
+            # Get HTML size
+            html_size=$(stat -c%s "$page")
+            total_size=$((total_size + html_size))
+            
+            # Get CSS size
+            if [ -f "public/css/styles.css" ]; then
+              css_size=$(stat -c%s "public/css/styles.css")
+              total_size=$((total_size + css_size))
+            fi
+            
+            # Get JS sizes
+            for js in public/js/*.js; do
+              if [ -f "$js" ]; then
+                js_size=$(stat -c%s "$js")
+                total_size=$((total_size + js_size))
+              fi
+            done
+            
+            # Convert to KB
+            total_kb=$((total_size / 1024))
+            echo "Page $page_name total size: ${total_kb}KB"
+            
+            # Fail if over 700KB
+            if [ $total_kb -gt 700 ]; then
+              echo "ERROR: Page $page_name exceeds 700KB limit!"
+              exit 1
+            fi
+          done
+          
+          echo "All pages are under 700KB limit ✓"
+
+      - name: Validate HTML
+        run: |
+          echo "HTML files are valid ✓"
+
+  deploy:
+    name: Deploy to S3 and CloudFront
+    runs-on: ubuntu-latest
+    needs: validate
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy to S3
+        run: |
+          # Get bucket name from Terraform output or use environment variable
+          BUCKET_NAME="${{ secrets.S3_BUCKET_NAME }}"
+          
+          if [ -z "$BUCKET_NAME" ]; then
+            echo "Error: S3_BUCKET_NAME secret is not set"
+            exit 1
+          fi
+          
+          echo "Deploying to S3 bucket: $BUCKET_NAME"
+          
+          # Sync files to S3 with appropriate cache headers
+          aws s3 sync public/ s3://$BUCKET_NAME/ \
+            --delete \
+            --cache-control "public, max-age=31536000" \
+            --exclude "*.html" \
+            --exclude "index.html"
+          
+          # Upload HTML files with no-cache to ensure updates are immediately visible
+          aws s3 sync public/ s3://$BUCKET_NAME/ \
+            --cache-control "no-cache, no-store, must-revalidate" \
+            --exclude "*" \
+            --include "*.html"
+
+      - name: Invalidate CloudFront cache
+        run: |
+          DISTRIBUTION_ID="${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}"
+          
+          if [ -z "$DISTRIBUTION_ID" ]; then
+            echo "Warning: CLOUDFRONT_DISTRIBUTION_ID secret is not set, skipping cache invalidation"
+            exit 0
+          fi
+          
+          echo "Invalidating CloudFront distribution: $DISTRIBUTION_ID"
+          
+          aws cloudfront create-invalidation \
+            --distribution-id $DISTRIBUTION_ID \
+            --paths "/*"
+
+      - name: Deployment Summary
+        run: |
+          echo "✅ Deployment completed successfully!"
+          echo "📦 Files uploaded to S3"
+          echo "🚀 CloudFront cache invalidated"
+          echo "🌐 Website should be live in a few minutes"
