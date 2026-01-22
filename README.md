@@ -121,15 +121,15 @@ Edit `public/css/styles.css` to customize the appearance. The CSS uses CSS custo
 
 ### Manual Testing Checklist
 
-- [ ] Home page loads correctly
-- [ ] Navigation works between pages
-- [ ] Login form validates input
-- [ ] Login with correct credentials redirects to dashboard
-- [ ] Login with incorrect credentials shows error
-- [ ] Dashboard is protected (redirects if not logged in)
-- [ ] Logout works correctly
-- [ ] Responsive design works on mobile
-- [ ] All pages load under 700KB
+- [x] Home page loads correctly
+- [x] Navigation works between pages
+- [x] Login form validates input
+- [x] Login with correct credentials redirects to dashboard
+- [x] Login with incorrect credentials shows error
+- [x] Dashboard is protected (redirects if not logged in)
+- [x] Logout works correctly
+- [x] Responsive design works on mobile
+- [x] All pages load under 700KB
 
 ## 🌍 Browser Support
 
